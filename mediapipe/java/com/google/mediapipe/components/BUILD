@@ -20,7 +20,10 @@ android_library(
         ["*.java"],
         exclude = [
             "CameraHelper.java",
+            "Camera2PreviewHelper.java",
+            "Camera2TextureFrameSource.java",
             "CameraXPreviewHelper.java",
+            "CameraXTextureFrameSource.java",
         ],
     ),
     visibility = ["//visibility:public"],
@@ -43,10 +46,14 @@ android_library(
     name = "android_camerax_helper",
     srcs = [
         "CameraHelper.java",
+        "Camera2PreviewHelper.java",
+        "Camera2TextureFrameSource.java",
         "CameraXPreviewHelper.java",
+        "CameraXTextureFrameSource.java",
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//mediapipe/java/com/google/mediapipe/components:android_components",
         "//mediapipe/java/com/google/mediapipe/glutil",
         "//third_party:androidx_appcompat",
         "//third_party:androidx_core",

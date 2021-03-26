@@ -46,6 +46,7 @@ android_binary(
         "applicationId": "com.google.mediapipe.apps.posetrackinggpu",
         "appName": "Pose Tracking",
         "mainActivity": ".MainActivity",
+        "textureFrameSource": "Camera2",
         "cameraFacingFront": "False",
         "binaryGraphName": "pose_tracking_gpu.binarypb",
         "inputVideoStreamName": "input_video",

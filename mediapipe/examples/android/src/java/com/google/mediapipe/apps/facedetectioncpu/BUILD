@@ -45,6 +45,7 @@ android_binary(
         "applicationId": "com.google.mediapipe.apps.facedetectioncpu",
         "appName": "Face Detection (CPU)",
         "mainActivity": "com.google.mediapipe.apps.basic.MainActivity",
+        "textureFrameSource": "Camera2",
         "cameraFacingFront": "True",
         "binaryGraphName": "face_detection_mobile_cpu.binarypb",
         "inputVideoStreamName": "input_video",

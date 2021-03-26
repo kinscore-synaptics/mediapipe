@@ -84,6 +84,7 @@ android_binary(
         "applicationId": "com.google.mediapipe.apps.instantmotiontracking",
         "appName": "Instant Motion Tracking",
         "mainActivity": ".MainActivity",
+        "textureFrameSource": "Camera2",
         "cameraFacingFront": "False",
         "binaryGraphName": "instant_motion_tracking.binarypb",
         "inputVideoStreamName": "input_video",

@@ -45,6 +45,7 @@ android_binary(
         "applicationId": "com.google.mediapipe.apps.handdetectiongpu",
         "appName": "Hand Detection",
         "mainActivity": "com.google.mediapipe.apps.basic.MainActivity",
+        "textureFrameSource": "Camera2",
         "cameraFacingFront": "True",
         "binaryGraphName": "hand_detection_mobile_gpu.binarypb",
         "inputVideoStreamName": "input_video",

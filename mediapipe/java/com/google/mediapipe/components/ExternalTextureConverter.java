@@ -19,6 +19,7 @@ import static java.lang.Math.max;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
+import android.os.Bundle;
 import android.util.Log;
 import com.google.mediapipe.framework.AppTextureFrame;
 import com.google.mediapipe.framework.GlSyncToken;
@@ -37,10 +38,12 @@ import javax.microedition.khronos.egl.EGLContext;
  * This means they cannot be used with a regular shader that expects a sampler2D. This class creates
  * a copy of the texture that can be used with {@link GLES20#GL_TEXTURE_2D} and sampler2D.
  */
-public class ExternalTextureConverter implements TextureFrameProducer {
+public abstract class ExternalTextureConverter implements TextureFrameSource {
   private static final String TAG = "ExternalTextureConv"; // Max length of a tag is 23.
   private static final int DEFAULT_NUM_BUFFERS = 2; // Number of output frames allocated.
   private static final String THREAD_NAME = "ExternalTextureConverter";
+
+  public static final String FLIP_FRAME_Y = "flipFramesVertically";
 
   private RenderThread thread;
   private Throwable startupException = null;
@@ -107,7 +110,7 @@ public class ExternalTextureConverter implements TextureFrameProducer {
    * Sets vertical flipping of the texture, useful for conversion between coordinate systems with
    * top-left v.s. bottom-left origins. This should be called before {@link
    * #setSurfaceTexture(SurfaceTexture, int, int)} or {@link
-   * #setSurfaceTextureAndAttachToGLContext(SurfaceTexture, int, int)}.
+   * #attach(SurfaceTexture, int, int)}.
    */
   public void setFlipY(boolean flip) {
     thread.setFlipY(flip);
@@ -117,7 +120,7 @@ public class ExternalTextureConverter implements TextureFrameProducer {
    * Sets rotation of the texture, useful for supporting landscape orientations. The value should
    * correspond to Display.getRotation(), e.g. Surface.ROTATION_0. Flipping (if any) is applied
    * before rotation. This should be called before {@link #setSurfaceTexture(SurfaceTexture, int,
-   * int)} or {@link #setSurfaceTextureAndAttachToGLContext(SurfaceTexture, int, int)}.
+   * int)} or {@link #attach(SurfaceTexture, int, int)}.
    */
   public void setRotation(int rotation) {
     thread.setRotation(rotation);
@@ -170,14 +173,15 @@ public class ExternalTextureConverter implements TextureFrameProducer {
   }
 
   // TODO: Clean up setSurfaceTexture methods.
-  public void setSurfaceTextureAndAttachToGLContext(SurfaceTexture texture, int width, int height) {
+  @Override
+  public void attach(SurfaceTexture texture, int width, int height) {
     if (texture != null && (width == 0 || height == 0)) {
       throw new RuntimeException(
           "ExternalTextureConverter: setSurfaceTexture dimensions cannot be zero");
     }
     thread
         .getHandler()
-        .post(() -> thread.setSurfaceTextureAndAttachToGLContext(texture, width, height));
+        .post(() -> thread.attach(texture, width, height));
   }
 
   @Override
@@ -185,15 +189,8 @@ public class ExternalTextureConverter implements TextureFrameProducer {
     thread.setConsumer(next);
   }
 
-  public void addConsumer(TextureFrameConsumer consumer) {
-    thread.addConsumer(consumer);
-  }
-
-  public void removeConsumer(TextureFrameConsumer consumer) {
-    thread.removeConsumer(consumer);
-  }
-
-  public void close() {
+  @Override
+  public void stop() {
     if (thread == null) {
       return;
     }
@@ -206,6 +203,14 @@ public class ExternalTextureConverter implements TextureFrameProducer {
       Log.e(TAG, "thread was unexpectedly interrupted: " + ie.getMessage());
       throw new RuntimeException(ie);
     }
+  }
+
+  public void addConsumer(TextureFrameConsumer consumer) {
+    thread.addConsumer(consumer);
+  }
+
+  public void removeConsumer(TextureFrameConsumer consumer) {
+    thread.removeConsumer(consumer);
   }
 
   protected RenderThread makeRenderThread(EGLContext parentContext, int numBuffers) {
@@ -277,7 +282,7 @@ public class ExternalTextureConverter implements TextureFrameProducer {
       destinationHeight = height;
     }
 
-    public void setSurfaceTextureAndAttachToGLContext(
+    public void attach(
         SurfaceTexture texture, int width, int height) {
       setSurfaceTexture(texture, width, height);
       int[] textures = new int[1];
@@ -494,5 +499,11 @@ public class ExternalTextureConverter implements TextureFrameProducer {
         throw new RuntimeException(ie);
       }
     }
+  }
+
+  public void setParameters(Bundle parameters) {
+      if (parameters.containsKey(FLIP_FRAME_Y)) {
+        setFlipY(parameters.getBoolean(FLIP_FRAME_Y));
+      }
   }
 }

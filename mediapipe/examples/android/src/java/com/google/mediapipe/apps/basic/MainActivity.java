@@ -14,6 +14,7 @@
 
 package com.google.mediapipe.apps.basic;
 
+import android.app.Activity;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
@@ -24,18 +25,21 @@ import android.util.Log;
 import android.util.Size;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
+import android.view.TextureView.SurfaceTextureListener;
 import android.view.View;
 import android.view.ViewGroup;
-import com.google.mediapipe.components.CameraHelper;
-import com.google.mediapipe.components.CameraXPreviewHelper;
+import com.google.mediapipe.components.Camera2TextureFrameSource;
+import com.google.mediapipe.components.CameraXTextureFrameSource;
 import com.google.mediapipe.components.ExternalTextureConverter;
 import com.google.mediapipe.components.FrameProcessor;
-import com.google.mediapipe.components.PermissionHelper;
+import com.google.mediapipe.components.TextureFrameHost;
+import com.google.mediapipe.components.TextureFrameSource;
 import com.google.mediapipe.framework.AndroidAssetUtil;
 import com.google.mediapipe.glutil.EglManager;
+import javax.microedition.khronos.egl.EGLContext;
 
 /** Main activity of MediaPipe basic app. */
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements TextureFrameHost {
   private static final String TAG = "MainActivity";
 
   // Flips the camera-preview frames vertically by default, before sending them into FrameProcessor
@@ -45,14 +49,6 @@ public class MainActivity extends AppCompatActivity {
   // top-left corner.
   // NOTE: use "flipFramesVertically" in manifest metadata to override this behavior.
   private static final boolean FLIP_FRAMES_VERTICALLY = true;
-
-  // Number of output frames allocated in ExternalTextureConverter.
-  // NOTE: use "converterNumBuffers" in manifest metadata to override number of buffers. For
-  // example, when there is a FlowLimiterCalculator in the graph, number of buffers should be at
-  // least `max_in_flight + max_in_queue + 1` (where max_in_flight and max_in_queue are used in
-  // FlowLimiterCalculator options). That's because we need buffers for all the frames that are in
-  // flight/queue plus one for the next frame from the camera.
-  private static final int NUM_BUFFERS = 2;
 
   static {
     // Load all native libraries needed by the app.
@@ -68,8 +64,7 @@ public class MainActivity extends AppCompatActivity {
   // Sends camera-preview frames into a MediaPipe graph for processing, and displays the processed
   // frames onto a {@link Surface}.
   protected FrameProcessor processor;
-  // Handles camera access via the {@link CameraX} Jetpack support library.
-  protected CameraXPreviewHelper cameraHelper;
+  protected TextureFrameSource source;
 
   // {@link SurfaceTexture} where the camera-preview frames can be accessed.
   private SurfaceTexture previewFrameTexture;
@@ -78,9 +73,6 @@ public class MainActivity extends AppCompatActivity {
 
   // Creates and manages an {@link EGLContext}.
   private EglManager eglManager;
-  // Converts the GL_TEXTURE_EXTERNAL_OES texture from Android camera into a regular texture to be
-  // consumed by {@link FrameProcessor} and the underlying MediaPipe graph.
-  private ExternalTextureConverter converter;
 
   // ApplicationInfo for retrieving metadata defined in the manifest.
   private ApplicationInfo applicationInfo;
@@ -115,8 +107,6 @@ public class MainActivity extends AppCompatActivity {
         .getVideoSurfaceOutput()
         .setFlipY(
             applicationInfo.metaData.getBoolean("flipFramesVertically", FLIP_FRAMES_VERTICALLY));
-
-    PermissionHelper.checkAndRequestCameraPermissions(this);
   }
 
   // Used to obtain the content view for this application. If you are extending this class, and
@@ -125,25 +115,33 @@ public class MainActivity extends AppCompatActivity {
     return R.layout.activity_main;
   }
 
+  protected TextureFrameSource buildTextureFrameSource() {
+    String name = applicationInfo.metaData.getString("textureFrameSource");
+    if (name != null) {
+      switch(name) {
+        case "CameraX":
+          return CameraXTextureFrameSource.create(this, applicationInfo.metaData);
+        case "Camera2":
+          return Camera2TextureFrameSource.create(this, applicationInfo.metaData);
+      }
+    }
+
+    throw new IllegalStateException("Unsupported texture frame source: " + name);
+  }
+
   @Override
   protected void onResume() {
     super.onResume();
-    converter =
-        new ExternalTextureConverter(
-            eglManager.getContext(),
-            applicationInfo.metaData.getInt("converterNumBuffers", NUM_BUFFERS));
-    converter.setFlipY(
-        applicationInfo.metaData.getBoolean("flipFramesVertically", FLIP_FRAMES_VERTICALLY));
-    converter.setConsumer(processor);
-    if (PermissionHelper.cameraPermissionsGranted(this)) {
-      startCamera();
-    }
+    source = buildTextureFrameSource();
+    source.checkAndRequestPermissions();
+    source.setConsumer(processor);
+    source.start();
   }
 
   @Override
   protected void onPause() {
     super.onPause();
-    converter.close();
+    source.stop();
 
     // Hide preview display until we re-open the camera again.
     previewDisplayView.setVisibility(View.GONE);
@@ -153,32 +151,25 @@ public class MainActivity extends AppCompatActivity {
   public void onRequestPermissionsResult(
       int requestCode, String[] permissions, int[] grantResults) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    PermissionHelper.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    source.onRequestPermissionsResult(requestCode, permissions, grantResults);
   }
 
-  protected void onCameraStarted(SurfaceTexture surfaceTexture) {
+  @Override
+  public EGLContext getEglContext() {
+      return eglManager.getContext();
+  }
+
+  @Override
+  public Activity getActivity() {
+      return this;
+  }
+
+  @Override
+  public void setSurfaceTexture(SurfaceTexture surfaceTexture) {
     previewFrameTexture = surfaceTexture;
     // Make the display view visible to start showing the preview. This triggers the
     // SurfaceHolder.Callback added to (the holder of) previewDisplayView.
     previewDisplayView.setVisibility(View.VISIBLE);
-  }
-
-  protected Size cameraTargetResolution() {
-    return null; // No preference and let the camera (helper) decide.
-  }
-
-  public void startCamera() {
-    cameraHelper = new CameraXPreviewHelper();
-    cameraHelper.setOnCameraStartedListener(
-        surfaceTexture -> {
-          onCameraStarted(surfaceTexture);
-        });
-    CameraHelper.CameraFacing cameraFacing =
-        applicationInfo.metaData.getBoolean("cameraFacingFront", false)
-            ? CameraHelper.CameraFacing.FRONT
-            : CameraHelper.CameraFacing.BACK;
-    cameraHelper.startCamera(
-        this, cameraFacing, /*unusedSurfaceTexture=*/ null, cameraTargetResolution());
   }
 
   protected Size computeViewSize(int width, int height) {
@@ -191,16 +182,13 @@ public class MainActivity extends AppCompatActivity {
     // camera-preview frames get rendered onto, potentially with scaling and rotation)
     // based on the size of the SurfaceView that contains the display.
     Size viewSize = computeViewSize(width, height);
-    Size displaySize = cameraHelper.computeDisplaySizeFromViewSize(viewSize);
-    boolean isCameraRotated = cameraHelper.isCameraRotated();
+    Size displaySize = source.computeDisplaySizeFromViewSize(viewSize);
+    boolean isRotated = source.isRotated();
 
-    // Connect the converter to the camera-preview frames as its input (via
-    // previewFrameTexture), and configure the output width and height as the computed
-    // display size.
-    converter.setSurfaceTextureAndAttachToGLContext(
+    source.attach(
         previewFrameTexture,
-        isCameraRotated ? displaySize.getHeight() : displaySize.getWidth(),
-        isCameraRotated ? displaySize.getWidth() : displaySize.getHeight());
+        isRotated ? displaySize.getHeight() : displaySize.getWidth(),
+        isRotated ? displaySize.getWidth() : displaySize.getHeight());
   }
 
   private void setupPreviewDisplayView() {

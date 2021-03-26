@@ -46,6 +46,7 @@ android_binary(
         "applicationId": "com.google.mediapipe.apps.facemeshgpu",
         "appName": "Face Mesh",
         "mainActivity": ".MainActivity",
+        "textureFrameSource": "Camera2",
         "cameraFacingFront": "True",
         "binaryGraphName": "face_mesh_mobile_gpu.binarypb",
         "inputVideoStreamName": "input_video",

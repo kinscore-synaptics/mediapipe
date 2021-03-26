@@ -120,6 +120,24 @@ public class CameraXPreviewHelper extends CameraHelper {
   // the source is CameraCharacteristics.SENSOR_INFO_TIMESTAMP_SOURCE_UNKNOWN.
   private int cameraTimestampSource = CameraCharacteristics.SENSOR_INFO_TIMESTAMP_SOURCE_UNKNOWN;
 
+  private static Integer getLensFacing(CameraFacing cameraFacing) {
+      switch (cameraFacing) {
+          case FRONT: return CameraMetadata.LENS_FACING_FRONT;
+          case BACK: return CameraMetadata.LENS_FACING_BACK;
+          case EXTERNAL: return CameraMetadata.LENS_FACING_EXTERNAL;
+      }
+      return null;
+  }
+
+  private static CameraSelector getCameraSelector(CameraFacing cameraFacing) {
+      switch (cameraFacing) {
+          case FRONT: return CameraSelector.DEFAULT_FRONT_CAMERA;
+          case BACK: return CameraSelector.DEFAULT_BACK_CAMERA;
+      }
+      return null;
+  }
+
+
   /**
    * Initializes the camera and sets it up for accessing frames, using the default 1280 * 720
    * preview size.
@@ -182,11 +200,6 @@ public class CameraXPreviewHelper extends CameraHelper {
 
           preview = new Preview.Builder().setTargetResolution(rotatedSize).build();
 
-          CameraSelector cameraSelector =
-              cameraFacing == CameraHelper.CameraFacing.FRONT
-                  ? CameraSelector.DEFAULT_FRONT_CAMERA
-                  : CameraSelector.DEFAULT_BACK_CAMERA;
-
           // Provide surface texture.
           preview.setSurfaceProvider(
               renderExecutor,
@@ -233,7 +246,7 @@ public class CameraXPreviewHelper extends CameraHelper {
           cameraProvider.unbindAll();
 
           // Bind preview use case to camera.
-          camera = cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview);
+          camera = cameraProvider.bindToLifecycle(lifecycleOwner, getCameraSelector(cameraFacing), preview);
         },
         mainThreadExecutor);
   }
@@ -367,11 +380,7 @@ public class CameraXPreviewHelper extends CameraHelper {
       }
     }
 
-    Integer selectedLensFacing =
-        cameraFacing == CameraHelper.CameraFacing.FRONT
-            ? CameraMetadata.LENS_FACING_FRONT
-            : CameraMetadata.LENS_FACING_BACK;
-    cameraCharacteristics = getCameraCharacteristics(context, selectedLensFacing);
+    cameraCharacteristics = getCameraCharacteristics(context, cameraFacing);
     if (cameraCharacteristics != null) {
       // Queries camera timestamp source. It should be one of REALTIME or UNKNOWN
       // as documented in
@@ -417,22 +426,33 @@ public class CameraXPreviewHelper extends CameraHelper {
 
   @Nullable
   private static CameraCharacteristics getCameraCharacteristics(
-      Context context, Integer lensFacing) {
+      Context context, CameraHelper.CameraFacing cameraFacing) {
+      Log.d(TAG, "getCameraCharacteristics");
     CameraManager cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
     try {
       List<String> cameraList = Arrays.asList(cameraManager.getCameraIdList());
+      if (cameraList.isEmpty()) {
+          Log.e(TAG, "No camera connected");
+          return null;
+      }
       for (String availableCameraId : cameraList) {
         CameraCharacteristics availableCameraCharacteristics =
             cameraManager.getCameraCharacteristics(availableCameraId);
-        Integer availableLensFacing =
-            availableCameraCharacteristics.get(CameraCharacteristics.LENS_FACING);
-        if (availableLensFacing == null) {
-          continue;
+        Integer lensFacing = getLensFacing(cameraFacing);
+        if (lensFacing != null) {
+            Integer availableLensFacing =
+                availableCameraCharacteristics.get(CameraCharacteristics.LENS_FACING);
+            if (availableLensFacing == null || !availableLensFacing.equals(lensFacing)) {
+              Log.d(TAG, "Skipping camera " +  availableCameraId);
+              continue;
+            }
         }
-        if (availableLensFacing.equals(lensFacing)) {
-          return availableCameraCharacteristics;
-        }
+        Log.d(TAG, "Found camera " +  availableCameraId);
+        return availableCameraCharacteristics;
       }
+      String cameraId = cameraList.get(0);
+      Log.w(TAG, "Defaulting to camera " +  cameraId);
+      return cameraManager.getCameraCharacteristics(cameraId);
     } catch (CameraAccessException e) {
       Log.e(TAG, "Accessing camera ID info got error: " + e);
     }

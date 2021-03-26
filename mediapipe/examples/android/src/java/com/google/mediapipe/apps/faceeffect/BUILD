@@ -53,6 +53,7 @@ android_binary(
         "applicationId": "com.google.mediapipe.apps.faceeffect",
         "appName": "Face Effect",
         "mainActivity": ".MainActivity",
+        "textureFrameSource": "Camera2",
         "cameraFacingFront": "True",
         "binaryGraphName": "face_effect_gpu.binarypb",
         "inputVideoStreamName": "input_video",

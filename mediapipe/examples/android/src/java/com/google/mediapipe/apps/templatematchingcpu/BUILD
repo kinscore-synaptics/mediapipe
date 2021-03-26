@@ -47,6 +47,7 @@ android_binary(
         "applicationId": "com.google.mediapipe.apps.templatematchingcpu",
         "appName": "Template Matching",
         "mainActivity": "com.google.mediapipe.apps.basic.MainActivity",
+        "textureFrameSource": "Camera2",
         "cameraFacingFront": "False",
         "binaryGraphName": "mobile_cpu.binarypb",
         "inputVideoStreamName": "input_video",

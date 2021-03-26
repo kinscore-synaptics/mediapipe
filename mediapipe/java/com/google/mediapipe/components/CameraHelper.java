@@ -16,6 +16,7 @@ package com.google.mediapipe.components;
 
 import android.app.Activity;
 import android.graphics.SurfaceTexture;
+import android.hardware.camera2.CameraMetadata;
 import android.util.Size;
 import javax.annotation.Nullable;
 
@@ -35,7 +36,9 @@ public abstract class CameraHelper {
   /** Represents the direction the camera faces relative to device screen. */
   public static enum CameraFacing {
     FRONT,
-    BACK
+    BACK,
+    EXTERNAL,
+    ANY
   };
 
   protected OnCameraStartedListener onCameraStartedListener;

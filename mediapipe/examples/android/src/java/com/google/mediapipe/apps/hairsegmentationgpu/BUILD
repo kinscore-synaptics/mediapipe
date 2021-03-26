@@ -45,6 +45,7 @@ android_binary(
         "applicationId": "com.google.mediapipe.apps.hairsegmentationgpu",
         "appName": "Hair Segmentation",
         "mainActivity": "com.google.mediapipe.apps.basic.MainActivity",
+        "textureFrameSource": "Camera2",
         "cameraFacingFront": "True",
         "binaryGraphName": "mobile_gpu.binarypb",
         "inputVideoStreamName": "input_video",

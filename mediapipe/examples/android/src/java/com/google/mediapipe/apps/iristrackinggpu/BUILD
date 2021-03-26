@@ -47,6 +47,7 @@ android_binary(
         "applicationId": "com.google.mediapipe.apps.iristrackinggpu",
         "appName": "Iris Tracking",
         "mainActivity": ".MainActivity",
+        "textureFrameSource": "Camera2",
         "cameraFacingFront": "True",
         "binaryGraphName": "iris_tracking_gpu.binarypb",
         "inputVideoStreamName": "input_video",

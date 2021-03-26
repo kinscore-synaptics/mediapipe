@@ -46,6 +46,7 @@ android_binary(
         "applicationId": "com.google.mediapipe.apps.objectdetectiongpu",
         "appName": "Object Detection",
         "mainActivity": "com.google.mediapipe.apps.basic.MainActivity",
+        "textureFrameSource": "Camera2",
         "cameraFacingFront": "False",
         "binaryGraphName": "mobile_gpu.binarypb",
         "inputVideoStreamName": "input_video",

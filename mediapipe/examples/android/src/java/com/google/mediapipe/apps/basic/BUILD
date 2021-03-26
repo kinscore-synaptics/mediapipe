@@ -69,6 +69,7 @@ android_binary(
         "applicationId": "com.google.mediapipe.apps.basic",
         "appName": "Hello World",
         "mainActivity": ".MainActivity",
+        "textureFrameSource": "Camera2",
         "cameraFacingFront": "False",
         "binaryGraphName": "mobile_gpu.binarypb",
         "inputVideoStreamName": "input_video",
