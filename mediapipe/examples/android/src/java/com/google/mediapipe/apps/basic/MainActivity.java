@@ -28,12 +28,7 @@ import android.view.SurfaceView;
 import android.view.TextureView.SurfaceTextureListener;
 import android.view.View;
 import android.view.ViewGroup;
-import com.google.mediapipe.components.Camera2TextureFrameSource;
-import com.google.mediapipe.components.CameraXTextureFrameSource;
-import com.google.mediapipe.components.ExternalTextureConverter;
-import com.google.mediapipe.components.FrameProcessor;
-import com.google.mediapipe.components.TextureFrameHost;
-import com.google.mediapipe.components.TextureFrameSource;
+import com.google.mediapipe.components.*;
 import com.google.mediapipe.framework.AndroidAssetUtil;
 import com.google.mediapipe.glutil.EglManager;
 import javax.microedition.khronos.egl.EGLContext;
@@ -123,6 +118,8 @@ public class MainActivity extends AppCompatActivity implements TextureFrameHost 
           return CameraXTextureFrameSource.create(this, applicationInfo.metaData);
         case "Camera2":
           return Camera2TextureFrameSource.create(this, applicationInfo.metaData);
+        case "MediaPlayer":
+          return MediaPlayerTextureFrameSource.create(this, applicationInfo.metaData);
       }
     }
 
