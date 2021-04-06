@@ -71,6 +71,18 @@ public class MainActivity extends AppCompatActivity implements TextureFrameHost 
 
   // ApplicationInfo for retrieving metadata defined in the manifest.
   private ApplicationInfo applicationInfo;
+  // ApplicationInfo metadata
+  private Bundle metaData;
+  // Intent extras
+  private Bundle extras;
+  // combined options from metadata, extras, and saved state
+  private Bundle options;
+
+  private void addOptions(Bundle a, String name) {
+      if (a != null) {
+          options.putAll(a);
+      }
+  }
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -80,9 +92,17 @@ public class MainActivity extends AppCompatActivity implements TextureFrameHost 
     try {
       applicationInfo =
           getPackageManager().getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA);
+      metaData = applicationInfo.metaData;
     } catch (NameNotFoundException e) {
       Log.e(TAG, "Cannot find application info: " + e);
     }
+
+    extras = getIntent().getExtras();
+
+    options = new Bundle();
+    addOptions(metaData, "metadata");
+    addOptions(extras, "extras");
+    addOptions(savedInstanceState, "saved instance state");
 
     previewDisplayView = new SurfaceView(this);
     setupPreviewDisplayView();
@@ -95,13 +115,13 @@ public class MainActivity extends AppCompatActivity implements TextureFrameHost 
         new FrameProcessor(
             this,
             eglManager.getNativeContext(),
-            applicationInfo.metaData.getString("binaryGraphName"),
-            applicationInfo.metaData.getString("inputVideoStreamName"),
-            applicationInfo.metaData.getString("outputVideoStreamName"));
+            options.getString("binaryGraphName"),
+            options.getString("inputVideoStreamName"),
+            options.getString("outputVideoStreamName"));
     processor
         .getVideoSurfaceOutput()
         .setFlipY(
-            applicationInfo.metaData.getBoolean("flipFramesVertically", FLIP_FRAMES_VERTICALLY));
+            options.getBoolean("flipFramesVertically", FLIP_FRAMES_VERTICALLY));
   }
 
   // Used to obtain the content view for this application. If you are extending this class, and
@@ -111,15 +131,15 @@ public class MainActivity extends AppCompatActivity implements TextureFrameHost 
   }
 
   protected TextureFrameSource buildTextureFrameSource() {
-    String name = applicationInfo.metaData.getString("textureFrameSource");
+    String name = options.getString("textureFrameSource");
     if (name != null) {
       switch(name) {
         case "CameraX":
-          return CameraXTextureFrameSource.create(this, applicationInfo.metaData);
+          return CameraXTextureFrameSource.create(this, options);
         case "Camera2":
-          return Camera2TextureFrameSource.create(this, applicationInfo.metaData);
+          return Camera2TextureFrameSource.create(this, options);
         case "MediaPlayer":
-          return MediaPlayerTextureFrameSource.create(this, applicationInfo.metaData);
+          return MediaPlayerTextureFrameSource.create(this, options);
       }
     }
 
