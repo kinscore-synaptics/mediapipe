@@ -73,15 +73,18 @@ input_side_packet: "UPPER_BODY_ONLY:upper_body_only"
 # 32 - right foot index
 #
 
+output_stream: "LANDMARKS:landmarks"
+output_stream: "DETECTION:pose_detection"
+
 # Extra outputs (for debugging, for instance).
 # Detected poses. (Detection)
 output_stream: "unfiltered_detections"
 output_stream: "detection_floats"
 # Regions of interest calculated based on pose detections. (NormalizedRect)
 output_stream: "ROI_FROM_DETECTION:pose_rect_from_detection"
+# Regions of interest calculated based on landmarks. (NormalizedRect)
+output_stream: "ROI_FROM_LANDMARKS:pose_rect_from_landmarks"
 
-output_stream: "landmarks"
-output_stream: "auxiliary_landmarks"
 
 # Transforms the input image into a 128x128 while keeping the aspect ratio
 # (what is expected by the corresponding model), resulting in potential
@@ -390,4 +393,13 @@ node {
       ranges: { begin: 33 end: 35 }
     }
   }
+}
+
+# Calculates region of interest based on the auxiliary landmarks, to be used in
+# the subsequent image.
+node {
+  calculator: "PoseLandmarksToRoi"
+  input_stream: "LANDMARKS:auxiliary_landmarks"
+  input_stream: "IMAGE_SIZE:image_size"
+  output_stream: "ROI:pose_rect_from_landmarks"
 }
