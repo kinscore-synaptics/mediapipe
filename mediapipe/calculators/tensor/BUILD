@@ -14,7 +14,7 @@
 #
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
-load("//mediapipe/framework/port:build_config.bzl", "mediapipe_proto_library")
+load("//mediapipe/framework/port:build_config.bzl", "mediapipe_proto_library", "mediapipe_cc_proto_library")
 load(
     "//mediapipe/framework/tool:mediapipe_graph.bzl",
     "mediapipe_binary_graph",
@@ -749,4 +749,58 @@ cc_test(
         "//mediapipe/framework/formats:rect_cc_proto",
         "//mediapipe/framework/port:gtest_main",
     ],
+)
+
+proto_library(
+    name = "pose_detect_floats_calculator_options_proto",
+    srcs = ["pose_detect_floats_calculator_options.proto"],
+    visibility = ["//visibility:public"],
+    deps = ["//mediapipe/framework:calculator_proto"],
+)
+mediapipe_cc_proto_library(
+    name = "pose_detect_floats_calculator_options_cc_proto",
+    srcs = ["pose_detect_floats_calculator_options.proto"],
+    cc_deps = ["//mediapipe/framework:calculator_cc_proto"],
+    visibility = ["//visibility:public"],
+    deps = [":pose_detect_floats_calculator_options_proto"],
+)
+cc_library(
+    name = "pose_detect_floats_calculator",
+    srcs = ["pose_detect_floats_calculator.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":pose_detect_floats_calculator_options_cc_proto",
+        "//mediapipe/framework:calculator_framework",
+        "//mediapipe/framework/port:ret_check",
+        "//mediapipe/framework/port:status",
+        "//mediapipe/framework/formats:tensor",
+    ],
+    alwayslink = 1,
+)
+
+proto_library(
+    name = "pose_landmark_floats_calculator_options_proto",
+    srcs = ["pose_landmark_floats_calculator_options.proto"],
+    visibility = ["//visibility:public"],
+    deps = ["//mediapipe/framework:calculator_proto"],
+)
+mediapipe_cc_proto_library(
+    name = "pose_landmark_floats_calculator_options_cc_proto",
+    srcs = ["pose_landmark_floats_calculator_options.proto"],
+    cc_deps = ["//mediapipe/framework:calculator_cc_proto"],
+    visibility = ["//visibility:public"],
+    deps = [":pose_landmark_floats_calculator_options_proto"],
+)
+cc_library(
+    name = "pose_landmark_floats_calculator",
+    srcs = ["pose_landmark_floats_calculator.cc"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":pose_landmark_floats_calculator_options_cc_proto",
+        "//mediapipe/framework:calculator_framework",
+        "//mediapipe/framework/port:ret_check",
+        "//mediapipe/framework/port:status",
+        "//mediapipe/framework/formats:tensor",
+    ],
+    alwayslink = 1,
 )

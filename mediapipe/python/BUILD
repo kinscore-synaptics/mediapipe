@@ -62,6 +62,8 @@ cc_library(
         "//mediapipe/calculators/core:string_to_int_calculator",
         "//mediapipe/calculators/image:image_transformation_calculator",
         "//mediapipe/calculators/util:detection_unique_id_calculator",
+        "//mediapipe/calculators/tensor:pose_detect_floats_calculator",
+        "//mediapipe/calculators/tensor:pose_landmark_floats_calculator",
         "//mediapipe/modules/face_detection:face_detection_front_cpu",
         "//mediapipe/modules/face_landmark:face_landmark_front_cpu",
         "//mediapipe/modules/hand_landmark:hand_landmark_tracking_cpu",
