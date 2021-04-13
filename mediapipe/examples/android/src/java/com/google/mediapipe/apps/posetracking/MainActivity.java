@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.google.mediapipe.apps.posetrackinggpu;
+package com.google.mediapipe.apps.posetracking;
 
 import android.os.Bundle;
 import android.util.Log;
@@ -20,6 +20,9 @@ import com.google.mediapipe.formats.proto.LandmarkProto.NormalizedLandmark;
 import com.google.mediapipe.formats.proto.LandmarkProto.NormalizedLandmarkList;
 import com.google.mediapipe.framework.PacketGetter;
 import com.google.protobuf.InvalidProtocolBufferException;
+import java.io.File;
+import java.io.FileWriter;
+import java.util.List;
 
 /** Main activity of MediaPipe pose tracking app. */
 public class MainActivity extends com.google.mediapipe.apps.basic.MainActivity {
@@ -31,6 +34,8 @@ public class MainActivity extends com.google.mediapipe.apps.basic.MainActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
+    File logFile = new File("/sdcard/" + options.getString("binaryGraphName") + ".landmarks.txt");
+
     // To show verbose logging, run:
     // adb shell setprop log.tag.MainActivity VERBOSE
     if (Log.isLoggable(TAG, Log.VERBOSE)) {
@@ -39,19 +44,35 @@ public class MainActivity extends com.google.mediapipe.apps.basic.MainActivity {
           (packet) -> {
             Log.v(TAG, "Received pose landmarks packet.");
             try {
-              NormalizedLandmarkList poseLandmarks =
-                  PacketGetter.getProto(packet, NormalizedLandmarkList.class);
+              byte[] poseLandmarks =
+                  PacketGetter.getProtoBytes(packet);
+
+              FileWriter w = new FileWriter(logFile);
+              for (byte b : poseLandmarks) {
+                  w.append(b + "\n");
+              }
+              w.flush();
+              w.close();
+
               Log.v(
                   TAG,
                   "[TS:"
                       + packet.getTimestamp()
                       + "] "
                       + getPoseLandmarksDebugString(poseLandmarks));
-            } catch (InvalidProtocolBufferException exception) {
+            } catch (Exception exception) {
               Log.e(TAG, "Failed to get proto.", exception);
             }
           });
     }
+  }
+
+  private static String getPoseLandmarksDebugString(byte[] poseLandmarks) {
+    String poseLandmarkStr = "Pose landmarks: " + poseLandmarks.length + "\n";
+    for (byte b : poseLandmarks) {
+        poseLandmarkStr += b + " ";
+    }
+    return poseLandmarkStr;
   }
 
   private static String getPoseLandmarksDebugString(NormalizedLandmarkList poseLandmarks) {

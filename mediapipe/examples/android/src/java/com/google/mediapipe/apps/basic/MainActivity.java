@@ -19,6 +19,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.SurfaceTexture;
+import android.Manifest.permission;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
@@ -36,6 +37,7 @@ import javax.microedition.khronos.egl.EGLContext;
 /** Main activity of MediaPipe basic app. */
 public class MainActivity extends AppCompatActivity implements TextureFrameHost {
   private static final String TAG = "MainActivity";
+  private static final String[] permissions = new String[] { permission.WRITE_EXTERNAL_STORAGE };
 
   // Flips the camera-preview frames vertically by default, before sending them into FrameProcessor
   // to be processed in a MediaPipe graph, and flips the processed frames back when they are
@@ -76,7 +78,7 @@ public class MainActivity extends AppCompatActivity implements TextureFrameHost 
   // Intent extras
   private Bundle extras;
   // combined options from metadata, extras, and saved state
-  private Bundle options;
+  protected Bundle options;
 
   private void addOptions(Bundle a, String name) {
       if (a != null) {
@@ -151,6 +153,7 @@ public class MainActivity extends AppCompatActivity implements TextureFrameHost 
     super.onResume();
     source = buildTextureFrameSource();
     source.checkAndRequestPermissions();
+    PermissionHelper.checkAndRequestPermissions(this, permissions);
     source.setConsumer(processor);
     source.start();
   }

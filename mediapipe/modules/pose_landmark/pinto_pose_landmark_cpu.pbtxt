@@ -125,7 +125,7 @@ node {
   options: {
     [mediapipe.ConstantSidePacketCalculatorOptions.ext]: {
       packet {
-        string_value: "01_pose_detection/saved_model_tflite_tfjs_coreml_onnx/model_float32.tflite"
+        string_value: "mediapipe/modules/pose_landmark/pinto_pose_detect_float32.tflite"
       }
     }
   }
@@ -296,7 +296,7 @@ node {
   options: {
     [mediapipe.ConstantSidePacketCalculatorOptions.ext]: {
       packet {
-        string_value: "03_pose_landmark_full_body/saved_model_tflite_tfjs_coreml_onnx/model_float32.tflite"
+        string_value: "mediapipe/modules/pose_landmark/pinto_full_body_float32.tflite"
       }
     }
   }

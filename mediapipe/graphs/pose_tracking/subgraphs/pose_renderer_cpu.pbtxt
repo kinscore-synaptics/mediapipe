@@ -270,5 +270,11 @@ node {
   input_stream: "landmarks_left_joints_render_data"
   input_stream: "landmarks_right_joints_render_data"
   input_stream: "roi_render_data"
-  output_stream: "IMAGE:output_image"
+  output_stream: "IMAGE:output_image_cpu"
+}
+
+node {
+  calculator: "ImageFrameToGpuBufferCalculator"
+  input_stream: "output_image_cpu"
+  output_stream: "output_image"
 }

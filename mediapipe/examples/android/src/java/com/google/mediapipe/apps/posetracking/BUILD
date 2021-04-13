@@ -1,4 +1,4 @@
-# Copyright 2020 The MediaPipe Authors.
+# Copyright 2021 The MediaPipe Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,9 @@ cc_binary(
     linkshared = 1,
     linkstatic = 1,
     deps = [
+        "//mediapipe/graphs/pose_tracking:pose_tracking_cpu_deps",
         "//mediapipe/graphs/pose_tracking:pose_tracking_gpu_deps",
+        "//mediapipe/graphs/pose_tracking:pinto_pose_tracking_cpu_deps",
         "//mediapipe/java/com/google/mediapipe/framework/jni:mediapipe_framework_jni",
     ],
 )
@@ -33,17 +35,21 @@ cc_library(
 )
 
 android_binary(
-    name = "posetrackinggpu",
+    name = "posetracking",
     srcs = glob(["*.java"]),
     assets = [
+        "//mediapipe/graphs/pose_tracking:pose_tracking_cpu.binarypb",
         "//mediapipe/graphs/pose_tracking:pose_tracking_gpu.binarypb",
+        "//mediapipe/graphs/pose_tracking:pinto_pose_tracking_cpu.binarypb",
         "//mediapipe/modules/pose_landmark:pose_landmark_full_body.tflite",
+        "//mediapipe/modules/pose_landmark:pinto_full_body_float32.tflite",
+        "//mediapipe/modules/pose_landmark:pinto_pose_detect_float32.tflite",
         "//mediapipe/modules/pose_detection:pose_detection.tflite",
     ],
     assets_dir = "",
     manifest = "//mediapipe/examples/android/src/java/com/google/mediapipe/apps/basic:AndroidManifest.xml",
     manifest_values = {
-        "applicationId": "com.google.mediapipe.apps.posetrackinggpu",
+        "applicationId": "com.google.mediapipe.apps.posetracking",
         "appName": "Pose Tracking",
         "mainActivity": ".MainActivity",
         "textureFrameSource": "Camera2",
