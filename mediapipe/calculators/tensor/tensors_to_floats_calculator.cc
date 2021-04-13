@@ -77,9 +77,10 @@ absl::Status TensorsToFloatsCalculator::Process(CalculatorContext* cc) {
   const auto& input_tensors = *kInTensors(cc);
   RET_CHECK(!input_tensors.empty());
   // TODO: Add option to specify which tensor to take from.
-  auto view = input_tensors[0].GetCpuReadView();
+  const auto index = options_.index();
+  auto view = input_tensors[index].GetCpuReadView();
   auto raw_floats = view.buffer<float>();
-  int num_values = input_tensors[0].shape().num_elements();
+  int num_values = input_tensors[index].shape().num_elements();
   auto output_floats = absl::make_unique<std::vector<float>>(
       raw_floats, raw_floats + num_values);
 
