@@ -125,7 +125,7 @@ mediapipe_simple_subgraph(
 )
 
 cc_library(
-    name = "pinto_pose_landmark_deps",
+    name = "pinto_pose_landmark_cpu_deps",
     deps = [
         ":pose_detection_to_roi",
         ":pose_landmarks_to_roi",
@@ -157,7 +157,43 @@ mediapipe_simple_subgraph(
     name = "pinto_pose_landmark_cpu",
     graph = "pinto_pose_landmark_cpu.pbtxt",
     register_as = "PintoPoseLandmarkCpu",
-    deps = [":pinto_pose_landmark_deps"],
+    deps = [":pinto_pose_landmark_cpu_deps"],
+)
+
+cc_library(
+    name = "pinto_pose_landmark_npu_deps",
+    deps = [
+        ":pose_detection_to_roi",
+        ":pose_landmarks_to_roi",
+        "//mediapipe/calculators/core:constant_side_packet_calculator",
+        "//mediapipe/calculators/core:gate_calculator",
+        "//mediapipe/calculators/core:merge_calculator",
+        "//mediapipe/calculators/core:packet_presence_calculator",
+        "//mediapipe/calculators/core:previous_loopback_calculator",
+        "//mediapipe/calculators/core:split_normalized_landmark_list_calculator",
+        "//mediapipe/calculators/core:split_vector_calculator",
+        "//mediapipe/calculators/image:image_properties_calculator",
+        "//mediapipe/calculators/tensor:image_to_tensor_calculator",
+        "//mediapipe/calculators/tensor:inference_calculator",
+        "//mediapipe/calculators/tensor:tensors_to_detections_calculator",
+        "//mediapipe/calculators/tensor:tensors_to_floats_calculator",
+        "//mediapipe/calculators/tensor:tensors_to_landmarks_calculator",
+        "//mediapipe/calculators/synap:synap_inference_calculator",
+        "//mediapipe/calculators/tflite:ssd_anchors_calculator",
+        "//mediapipe/calculators/util:detection_letterbox_removal_calculator",
+        "//mediapipe/calculators/util:landmark_letterbox_removal_calculator",
+        "//mediapipe/calculators/util:landmark_projection_calculator",
+        "//mediapipe/calculators/util:local_file_contents_calculator",
+        "//mediapipe/calculators/util:non_max_suppression_calculator",
+        "//mediapipe/modules/pose_detection:pose_detection_cpu",
+    ],
+)
+
+mediapipe_simple_subgraph(
+    name = "pinto_pose_landmark_npu",
+    graph = "pinto_pose_landmark_npu.pbtxt",
+    register_as = "PintoPoseLandmarkNpu",
+    deps = [":pinto_pose_landmark_npu_deps"],
 )
 
 mediapipe_simple_subgraph(
@@ -183,7 +219,11 @@ mediapipe_simple_subgraph(
 exports_files(
     srcs = [
         "pinto_full_body_float32.tflite",
+        "pinto_full_body_integer_quant.nb",
+        "pinto_full_body_integer_quant.json",
         "pinto_pose_detect_float32.tflite",
+        "pinto_pose_detect_integer_quant.nb",
+        "pinto_pose_detect_integer_quant.json",
         "pose_landmark_full_body.tflite",
         "pose_landmark_upper_body.tflite",
     ],

@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity implements TextureFrameHost 
 
   static {
     // Load all native libraries needed by the app.
+    System.loadLibrary("synapnb");
     System.loadLibrary("mediapipe_jni");
     try {
       System.loadLibrary("opencv_java3");

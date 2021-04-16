@@ -24,6 +24,7 @@ cc_binary(
         "//mediapipe/graphs/pose_tracking:pose_tracking_cpu_deps",
         "//mediapipe/graphs/pose_tracking:pose_tracking_gpu_deps",
         "//mediapipe/graphs/pose_tracking:pinto_pose_tracking_cpu_deps",
+        "//mediapipe/graphs/pose_tracking:pinto_pose_tracking_npu_deps",
         "//mediapipe/java/com/google/mediapipe/framework/jni:mediapipe_framework_jni",
     ],
 )
@@ -34,6 +35,34 @@ cc_library(
     alwayslink = 1,
 )
 
+cc_binary(
+    name = "libsynapnb.so",
+    linkshared = 1,
+    linkstatic = 1,
+)
+
+cc_binary(
+    name = "libVIPBroker.so",
+    linkshared = 1,
+    linkstatic = 1,
+)
+
+cc_binary(
+    name = "libprofiling.so",
+    linkshared = 1,
+    linkstatic = 1,
+)
+
+cc_library(
+    name = "synap_lib",
+    srcs = [
+        ":libsynapnb.so",
+        ":libVIPBroker.so",
+        ":libprofiling.so",
+    ],
+    alwayslink = 1,
+)
+
 android_binary(
     name = "posetracking",
     srcs = glob(["*.java"]),
@@ -41,9 +70,14 @@ android_binary(
         "//mediapipe/graphs/pose_tracking:pose_tracking_cpu.binarypb",
         "//mediapipe/graphs/pose_tracking:pose_tracking_gpu.binarypb",
         "//mediapipe/graphs/pose_tracking:pinto_pose_tracking_cpu.binarypb",
+        "//mediapipe/graphs/pose_tracking:pinto_pose_tracking_npu.binarypb",
         "//mediapipe/modules/pose_landmark:pose_landmark_full_body.tflite",
         "//mediapipe/modules/pose_landmark:pinto_full_body_float32.tflite",
+        "//mediapipe/modules/pose_landmark:pinto_full_body_integer_quant.nb",
+        "//mediapipe/modules/pose_landmark:pinto_full_body_integer_quant.json",
         "//mediapipe/modules/pose_landmark:pinto_pose_detect_float32.tflite",
+        "//mediapipe/modules/pose_landmark:pinto_pose_detect_integer_quant.nb",
+        "//mediapipe/modules/pose_landmark:pinto_pose_detect_integer_quant.json",
         "//mediapipe/modules/pose_detection:pose_detection.tflite",
     ],
     assets_dir = "",
@@ -63,6 +97,7 @@ android_binary(
     multidex = "native",
     deps = [
         ":mediapipe_jni_lib",
+        ":synap_lib",
         "//mediapipe/examples/android/src/java/com/google/mediapipe/apps/basic:basic_lib",
         "//mediapipe/framework/formats:landmark_java_proto_lite",
         "//mediapipe/java/com/google/mediapipe/framework:android_framework",

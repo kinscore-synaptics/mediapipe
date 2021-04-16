@@ -1,0 +1,80 @@
+{
+    "Inputs": {
+        "input_0": {
+            "name": "input",
+            "shape": [
+                1,
+                256,
+                256,
+                3
+            ],
+            "format": "nhwc",
+            "dtype": "dynamic_fixed_point",
+            "quantize": {
+                "qtype": "i16",
+                "fl": [
+                    15
+                ]
+            },
+            "mean": [
+                0,
+                0,
+                0
+            ],
+            "scale": 0.00392156862745098
+        }
+    },
+    "Outputs": {
+        "output_298": {
+            "name": "output",
+            "shape": [
+                1,
+                1
+            ],
+            "format": "nhwc",
+            "dtype": "dynamic_fixed_point",
+            "quantize": {
+                "qtype": "i16",
+                "fl": [
+                    15
+                ]
+            },
+            "denormalize": 0
+        },
+        "output_299": {
+            "name": "output",
+            "shape": [
+                1,
+                195
+            ],
+            "format": "nhwc",
+            "dtype": "dynamic_fixed_point",
+            "quantize": {
+                "qtype": "i16",
+                "fl": [
+                    6
+                ]
+            },
+            "denormalize": 0
+        },
+        "output_300": {
+            "name": "output",
+            "shape": [
+                1,
+                128,
+                128,
+                1
+            ],
+            "format": "nhwc",
+            "dtype": "dynamic_fixed_point",
+            "quantize": {
+                "qtype": "i16",
+                "fl": [
+                    7
+                ]
+            },
+            "denormalize": 0
+        }
+    },
+    "Recurrent_connections": {}
+}
