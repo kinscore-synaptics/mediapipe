@@ -38,14 +38,6 @@ message SynapInferenceCalculatorOptions {
     optional SynapInferenceCalculatorOptions ext = 233867214;
   }
 
-  // Path to the NBG model (ex: /path/to/modelname.nbg).
-  // On mobile, this is generally just modelname.nbg.
-  required string model_path = 1;
-
-  // Path to the metadata JSON (ex: /path/to/modelname.json).
-  // On mobile, this is generally just modelname.json.
-  required string metadata_path = 2;
-
   // Whether to use CMA or standard allocator
   optional bool use_cma = 3;
 }

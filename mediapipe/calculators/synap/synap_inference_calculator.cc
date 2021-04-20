@@ -21,9 +21,11 @@
 #include "mediapipe/calculators/synap/synap_inference_calculator.pb.h"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/formats/tensor.h"
+#include "mediapipe/framework/port/logging.h"
 #include "mediapipe/framework/port/ret_check.h"
 #include "mediapipe/util/synap/inc/synap/allocator.hpp"
 #include "mediapipe/util/synap/inc/synap/network.hpp"
+#include "mediapipe/util/synap/model.hpp"
 
 namespace {
 constexpr char kTensorsTag[] = "TENSORS";
@@ -97,14 +99,12 @@ REGISTER_CALCULATOR(SynapInferenceCalculator);
 // Calculator Core Section
 
 absl::Status SynapInferenceCalculator::GetContract(CalculatorContract* cc) {
+  LOG(INFO) << "SynapInferenceCalculator::GetContract()";
   RET_CHECK(cc->Inputs().HasTag(kTensorsTag));
   RET_CHECK(cc->Outputs().HasTag(kTensorsTag));
 
-  const auto& options =
-      cc->Options<::mediapipe::SynapInferenceCalculatorOptions>();
-  RET_CHECK(!options.model_path().empty() ||
-            !options.metadata_path().empty())
-      << "Model path and Metadata path in options are required.";
+  cc->InputSidePackets().Tag("MODEL_BLOB").Set<std::string>();
+  cc->InputSidePackets().Tag("METADATA_BLOB").Set<std::string>();
 
   if (cc->Inputs().HasTag(kTensorsTag))
     cc->Inputs().Tag(kTensorsTag).Set<std::vector<Tensor>>();
@@ -114,25 +114,28 @@ absl::Status SynapInferenceCalculator::GetContract(CalculatorContract* cc) {
   // Assign this calculator's default InputStreamHandler.
   cc->SetInputStreamHandler("FixedSizeInputStreamHandler");
 
+  LOG(INFO) << "SynapInferenceCalculator::GetContract() => OK";
   return absl::OkStatus();
 }
 
 absl::Status SynapInferenceCalculator::Open(CalculatorContext* cc) {
+  LOG(INFO) << "SynapInferenceCalculator::Open()";
   cc->SetOffset(TimestampDiff(0));
 
   const auto& options =
       cc->Options<::mediapipe::SynapInferenceCalculatorOptions>();
 
-  network_ = absl::make_unique<Network>();
   allocator_ = options.use_cma() ? synap::cma_allocator() : synap::std_allocator();
 
   MP_RETURN_IF_ERROR(LoadModel(cc));
   MP_RETURN_IF_ERROR(AllocateOutputs(cc));
 
+  LOG(INFO) << "SynapInferenceCalculator::Open() => OK";
   return absl::OkStatus();
 }
 
 absl::Status SynapInferenceCalculator::Process(CalculatorContext* cc) {
+  LOG(INFO) << "SynapInferenceCalculator::Process()";
   // 1. Receive pre-processed tensor inputs.
   MP_RETURN_IF_ERROR(ProcessInputs(cc));
 
@@ -142,18 +145,23 @@ absl::Status SynapInferenceCalculator::Process(CalculatorContext* cc) {
   // 3. Output processed tensors.
   MP_RETURN_IF_ERROR(ProcessOutputs(cc));
 
+  LOG(INFO) << "SynapInferenceCalculator::Process() => OK";
   return absl::OkStatus();
 }
 
 absl::Status SynapInferenceCalculator::Close(CalculatorContext* cc) {
-
+  LOG(INFO) << "SynapInferenceCalculator::Close()";
+  LOG(INFO) << "SynapInferenceCalculator::Close() => OK";
   return absl::OkStatus();
 }
 
 // Calculator Auxiliary Section
 
 absl::Status SynapInferenceCalculator::ProcessInputs(CalculatorContext* cc) {
+  LOG(INFO) << "SynapInferenceCalculator::ProcessInputs()";
   if (cc->Inputs().Tag(kTensorsTag).IsEmpty()) {
+  LOG(INFO) << "SynapInferenceCalculator::ProcessInputs() => " << kTensorsTag << " is empty; nothing to do";
+  LOG(INFO) << "SynapInferenceCalculator::ProcessInputs() => OK";
     return absl::OkStatus();
   }
   // Read input into tensors.
@@ -168,10 +176,12 @@ absl::Status SynapInferenceCalculator::ProcessInputs(CalculatorContext* cc) {
     RET_CHECK(network_->inputs[i].assign(std::move(vec_bytes)));
   }
 
+  LOG(INFO) << "SynapInferenceCalculator::ProcessInputs() => OK";
   return absl::OkStatus();
 }
 
 absl::Status SynapInferenceCalculator::ProcessOutputs(CalculatorContext* cc) {
+  LOG(INFO) << "SynapInferenceCalculator::ProcessOutputs()";
   auto out = absl::make_unique<std::vector<Tensor>>();
   for (synap::Tensor& tensor : network_->outputs) {
     Tensor t(Tensor::ElementType::kFloat32, Tensor::Shape(tensor.shape()));
@@ -182,22 +192,39 @@ absl::Status SynapInferenceCalculator::ProcessOutputs(CalculatorContext* cc) {
 
   cc->Outputs().Tag(kTensorsTag).Add(out.release(), cc->InputTimestamp());
 
+  LOG(INFO) << "SynapInferenceCalculator::ProcessOutputs() => OK";
   return absl::OkStatus();
 }
 
 absl::Status SynapInferenceCalculator::LoadModel(CalculatorContext* cc) {
+  LOG(INFO) << "SynapInferenceCalculator::LoadModel()";
   const auto& options =
       cc->Options<::mediapipe::SynapInferenceCalculatorOptions>();
 
-  RET_CHECK(network_->load_model(options.model_path(), options.metadata_path()));
+  const Packet& model_packet = cc->InputSidePackets().Tag("MODEL_BLOB");
+  const Packet& metadata_packet = cc->InputSidePackets().Tag("METADATA_BLOB");
+  const std::string& model_blob = model_packet.Get<std::string>();
+  const std::string& metadata_blob = metadata_packet.Get<std::string>();
 
+  LOG(INFO) << "SynapInferenceCalculator::LoadModel() => model: " << model_blob.size();
+  LOG(INFO) << "SynapInferenceCalculator::LoadModel() => metadata: " << metadata_blob.c_str();
+
+  RET_CHECK(model_blob.data());
+  RET_CHECK(metadata_blob.c_str());
+
+  RET_CHECK(network_->load_model(model_blob.data(), model_blob.size(), metadata_blob.c_str()));
+
+  LOG(INFO) << "SynapInferenceCalculator::LoadModel() => OK";
   return absl::OkStatus();
 }
 
 absl::Status SynapInferenceCalculator::AllocateOutputs(CalculatorContext* cc) {
+  LOG(INFO) << "SynapInferenceCalculator::AllocateOutputs()";
   for (synap::Tensor& tensor : network_->outputs) {
       tensor.buffer()->set_allocator(allocator_);
   }
+  LOG(INFO) << "SynapInferenceCalculator::AllocateOutputs() => OK";
+  return absl::OkStatus();
 }
 
 }  // namespace mediapipe

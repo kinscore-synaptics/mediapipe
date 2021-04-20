@@ -22,7 +22,7 @@ package(default_visibility = [
 cc_library(
     name = "synap",
     srcs = glob(["lib/**"]),
-    hdrs = glob(["inc/synap/*.hpp"]),
+    hdrs = glob(["inc/synap/*.hpp", "*.hpp"]),
     alwayslink = 1,
 )
 

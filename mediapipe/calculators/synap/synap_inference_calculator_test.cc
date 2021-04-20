@@ -48,36 +48,13 @@ TEST(TfLiteInferenceCalculatorTest, SmokeTest_ModelAsInputSidePacket) {
     input_stream: "tensor_in"
 
     node {
-      calculator: "ConstantSidePacketCalculator"
-      output_side_packet: "PACKET:model_path"
-      options: {
-        [mediapipe.ConstantSidePacketCalculatorOptions.ext]: {
-          packet { string_value: "mediapipe/calculators/tflite/testdata/add.bin" }
-        }
-      }
-    }
-
-    node {
-      calculator: "LocalFileContentsCalculator"
-      input_side_packet: "FILE_PATH:model_path"
-      output_side_packet: "CONTENTS:model_blob"
-    }
-
-    node {
-      calculator: "TfLiteModelCalculator"
-      input_side_packet: "MODEL_BLOB:model_blob"
-      output_side_packet: "MODEL:model"
-    }
-
-    node {
-      calculator: "TfLiteInferenceCalculator"
+      calculator: "SynapInferenceCalculator"
       input_stream: "TENSORS:tensor_in"
       output_stream: "TENSORS:tensor_out"
-      input_side_packet: "MODEL:model"
       options {
-        [mediapipe.TfLiteInferenceCalculatorOptions.ext] {
-          use_gpu: false
-          delegate { tflite {} }
+        [mediapipe.SynapInferenceCalculatorOptions.ext] {
+          model_path: "mediapipe/modules/pose_landmark/pinto_pose_detect_integer_quant.nb"
+          metadata_path: "mediapipe/modules/pose_landmark/pinto_pose_detect_integer_quant.json"
         }
       }
     }

@@ -14,14 +14,14 @@
 #
 # EXAMPLE:
 #   node {
-#     calculator: "PoseLandmarkCpu"
+#     calculator: "PoseLandmarkNpu"
 #     input_side_packet: "UPPER_BODY_ONLY:upper_body_only"
 #     input_side_packet: "SMOOTH_LANDMARKS:smooth_landmarks"
 #     input_stream: "IMAGE:image"
 #     output_stream: "LANDMARKS:pose_landmarks"
 #   }
 
-type: "PintoPoseLandmarkCpu"
+type: "PintoPoseLandmarkNpu"
 
 # CPU image. (ImageFrame)
 input_stream: "IMAGE:image"
@@ -117,17 +117,42 @@ node {
   output_stream: "SIZE:image_size"
 }
 
+node {
+  calculator: "ConstantSidePacketCalculator"
+  output_side_packet: "PACKET:0:pose_detect_model_path"
+  output_side_packet: "PACKET:1:pose_detect_model_metadata_path"
+  options: {
+    [mediapipe.ConstantSidePacketCalculatorOptions.ext]: {
+      packet {
+        string_value: "mediapipe/modules/pose_landmark/pinto_pose_detect_integer_quant.nb"
+      }
+      packet {
+        string_value: "mediapipe/modules/pose_landmark/pinto_pose_detect_integer_quant.json"
+      }
+    }
+  }
+}
+
+node {
+  calculator: "LocalFileContentsCalculator"
+  input_side_packet: "FILE_PATH:0:pose_detect_model_path"
+  input_side_packet: "FILE_PATH:1:pose_detect_model_metadata_path"
+  output_side_packet: "CONTENTS:0:pose_detect_model_blob"
+  output_side_packet: "CONTENTS:1:pose_detect_model_metadata_blob"
+  options: {
+    [mediapipe.LocalFileContentsCalculatorOptions.ext]: {
+      text_mode: false
+    }
+  }
+}
+
 # Runs model inference on NPU.
 node {
   calculator: "SynapInferenceCalculator"
+  input_side_packet: "MODEL_BLOB:pose_detect_model_blob"
+  input_side_packet: "METADATA_BLOB:pose_detect_model_metadata_blob"
   input_stream: "TENSORS:detection_input_tensors"
   output_stream: "TENSORS:detection_tensors"
-  options: {
-    [mediapipe.SynapInferenceCalculatorOptions.ext] {
-      model_path: "mediapipe/modules/pose_landmark/pinto_pose_detect_integer_quant.nb"
-      metadata_path: "mediapipe/modules/pose_landmark/pinto_pose_detect_integer_quant.json"
-    }
-  }
 }
 
 node {
@@ -259,17 +284,42 @@ node {
   }
 }
 
+node {
+  calculator: "ConstantSidePacketCalculator"
+  output_side_packet: "PACKET:0:pose_tracking_model_path"
+  output_side_packet: "PACKET:1:pose_tracking_model_metadata_path"
+  options: {
+    [mediapipe.ConstantSidePacketCalculatorOptions.ext]: {
+      packet {
+        string_value: "mediapipe/modules/pose_landmark/pinto_full_body_integer_quant.nb"
+      }
+      packet {
+        string_value: "mediapipe/modules/pose_landmark/pinto_full_body_integer_quant.json"
+      }
+    }
+  }
+}
+
+node {
+  calculator: "LocalFileContentsCalculator"
+  input_side_packet: "FILE_PATH:0:pose_tracking_model_path"
+  input_side_packet: "FILE_PATH:1:pose_tracking_model_metadata_path"
+  output_side_packet: "CONTENTS:0:pose_tracking_model_blob"
+  output_side_packet: "CONTENTS:1:pose_tracking_model_metadata_blob"
+  options: {
+    [mediapipe.LocalFileContentsCalculatorOptions.ext]: {
+      text_mode: false
+    }
+  }
+}
+
 # Runs model inference on NPU.
 node {
   calculator: "SynapInferenceCalculator"
+  input_side_packet: "MODEL_BLOB:pose_tracking_model_blob"
+  input_side_packet: "METADATA_BLOB:pose_tracking_model_metadata_blob"
   input_stream: "TENSORS:landmarks_input_tensors"
   output_stream: "TENSORS:landmarks_output_tensors"
-  options: {
-    [mediapipe.SynapInferenceCalculatorOptions.ext] {
-      model_path: "mediapipe/modules/pose_landmark/pinto_full_body_integer_quant.nb"
-      metadata_path: "mediapipe/modules/pose_landmark/pinto_full_body_integer_quant.json"
-    }
-  }
 }
 
 # Splits a vector of TFLite tensors to multiple vectors according to the ranges
