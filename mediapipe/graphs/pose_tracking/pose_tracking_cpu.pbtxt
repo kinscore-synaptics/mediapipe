@@ -29,16 +29,10 @@ node {
   output_stream: "throttled_input_video"
 }
 
-node: {
-  calculator: "GpuBufferToImageFrameCalculator"
-  input_stream: "throttled_input_video"
-  output_stream: "input_video_cpu"
-}
-
 # Subgraph that detects poses and corresponding landmarks.
 node {
   calculator: "PoseLandmarkCpu"
-  input_stream: "IMAGE:input_video_cpu"
+  input_stream: "IMAGE:throttled_input_video"
   output_stream: "LANDMARKS:pose_landmarks"
   output_stream: "DETECTION:pose_detection"
   output_stream: "ROI_FROM_LANDMARKS:roi_from_landmarks"
@@ -47,7 +41,7 @@ node {
 # Calculates size of the image.
 node {
   calculator: "ImagePropertiesCalculator"
-  input_stream: "IMAGE:input_video_cpu"
+  input_stream: "IMAGE:throttled_input_video"
   output_stream: "SIZE:image_size"
 }
 
@@ -70,7 +64,7 @@ node {
 # Subgraph that renders pose-landmark annotation onto the input image.
 node {
   calculator: "PoseRendererCpu"
-  input_stream: "IMAGE:input_video_cpu"
+  input_stream: "IMAGE:throttled_input_video"
   input_stream: "LANDMARKS:pose_landmarks_smoothed"
   input_stream: "ROI:roi_from_landmarks"
   input_stream: "DETECTION:pose_detection"

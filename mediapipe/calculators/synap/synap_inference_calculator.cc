@@ -201,18 +201,27 @@ absl::Status SynapInferenceCalculator::LoadModel(CalculatorContext* cc) {
   const auto& options =
       cc->Options<::mediapipe::SynapInferenceCalculatorOptions>();
 
+  LOG(INFO) << "SynapInferenceCalculator::LoadModel() => get input...";
+
   const Packet& model_packet = cc->InputSidePackets().Tag("MODEL_BLOB");
   const Packet& metadata_packet = cc->InputSidePackets().Tag("METADATA_BLOB");
   const std::string& model_blob = model_packet.Get<std::string>();
   const std::string& metadata_blob = metadata_packet.Get<std::string>();
 
-  LOG(INFO) << "SynapInferenceCalculator::LoadModel() => model: " << model_blob.size();
-  LOG(INFO) << "SynapInferenceCalculator::LoadModel() => metadata: " << metadata_blob.c_str();
+  LOG(INFO) << "SynapInferenceCalculator::LoadModel() => get input done";
+
+  LOG(INFO) << "SynapInferenceCalculator::LoadModel() => checking model/metadata...";
 
   RET_CHECK(model_blob.data());
   RET_CHECK(metadata_blob.c_str());
 
+  LOG(INFO) << "SynapInferenceCalculator::LoadModel() => checking model/metadata done";
+
+  network_ = absl::make_unique<Network>();
+
+  LOG(INFO) << "SynapInferenceCalculator::LoadModel() => network_->load_model()...";
   RET_CHECK(network_->load_model(model_blob.data(), model_blob.size(), metadata_blob.c_str()));
+  LOG(INFO) << "SynapInferenceCalculator::LoadModel() => network_->load_model() done";
 
   LOG(INFO) << "SynapInferenceCalculator::LoadModel() => OK";
   return absl::OkStatus();
