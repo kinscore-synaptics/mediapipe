@@ -21,6 +21,7 @@ cc_binary(
     deps = [
         "//mediapipe/examples/desktop:simple_run_graph_main",
         "//mediapipe/modules/pose_landmark:pinto_pose_landmark_cpu_with_file_deps",
+        "//mediapipe/graphs/pose_tracking:pinto_pose_tracking_npu_img_deps",
     ],
 )
 
