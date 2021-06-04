@@ -116,6 +116,23 @@ mediapipe_binary_graph(
 )
 
 cc_library(
+    name = "pinto_pose_tracking_npu_img_deps",
+    deps = [
+        "//mediapipe/calculators/image:image_properties_calculator",
+        "//mediapipe/calculators/util:landmarks_smoothing_calculator",
+        "//mediapipe/graphs/pose_tracking/subgraphs:pose_renderer_cpu",
+        "//mediapipe/modules/pose_landmark:pinto_pose_landmark_npu",
+    ],
+)
+
+mediapipe_binary_graph(
+    name = "pinto_pose_tracking_npu_img_binary_graph",
+    graph = "pinto_pose_tracking_npu_img.pbtxt",
+    output_name = "pinto_pose_tracking_npu_img.binarypb",
+    deps = [":pinto_pose_tracking_npu_img_deps"],
+)
+
+cc_library(
     name = "upper_body_pose_tracking_gpu_deps",
     deps = [
         "//mediapipe/calculators/core:flow_limiter_calculator",
