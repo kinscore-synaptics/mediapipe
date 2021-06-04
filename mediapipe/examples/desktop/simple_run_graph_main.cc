@@ -41,13 +41,13 @@ ABSL_FLAG(std::string, input_side_packets, "",
           "for the CalculatorGraph. All values will be treated as the "
           "string type even if they represent doubles, floats, etc.");
 
+ABSL_FLAG(std::string, input_stream_files, "",
+          "Comma-seperated list of input_stream_name=TYPE:file_path");
+
 // Local file output flags.
 // Output stream
-ABSL_FLAG(std::string, output_stream, "",
-          "The output stream to output to the local file in csv format.");
-ABSL_FLAG(std::string, output_stream_file, "",
-          "The name of the local file to output all packets sent to "
-          "the stream specified with --output_stream. ");
+ABSL_FLAG(std::string, output_stream_files, "",
+          "Comma-seperated list of output_stream_name=file_path");
 ABSL_FLAG(bool, strip_timestamps, false,
           "If true, only the packet contents (without timestamps) will be "
           "written into the local file.");
@@ -58,25 +58,84 @@ ABSL_FLAG(std::string, output_side_packets_file, "",
           "The name of the local file to output all side packets specified "
           "with --output_side_packets. ");
 
-absl::Status OutputStreamToLocalFile(mediapipe::OutputStreamPoller& poller) {
-  std::ofstream file;
-  file.open(absl::GetFlag(FLAGS_output_stream_file));
+ABSL_FLAG(bool, wait_until_idle, false,
+          "If true, graph will be stopped when it is idle; "
+          "If false, graph will be stopped when it is done.");
+
+template <typename T>
+absl::StatusOr<std::vector<T>> GetInputData(std::string& file) {
+    std::ifstream f(file, std::ios::binary);
+    RET_CHECK(f.good());
+    T k;
+    std::vector<T> file_content;
+    while (f.read(reinterpret_cast<char*>(&k), sizeof(T))) {
+        file_content.emplace_back(k);
+    }
+    LOG(INFO) << "Read " << file_content.size() << " records from file '" << file << "'";
+    return file_content;
+}
+
+absl::StatusOr<mediapipe::Packet> MakePacket(std::string& type, std::string& file) {
+  if (type == "float") {
+    ASSIGN_OR_RETURN(std::vector<float> data, GetInputData<float>(file));
+    return mediapipe::MakePacket<std::vector<float>>(data);
+  }
+  RET_CHECK_FAIL() << "unsupported type: " << type;
+}
+
+absl::Status AddInputStreams(mediapipe::CalculatorGraph& graph) {
+  if (!absl::GetFlag(FLAGS_input_stream_files).empty()) {
+      LOG(INFO) << "Adding input streams.";
+      std::vector<std::string> kv_pairs =
+          absl::StrSplit(absl::GetFlag(FLAGS_input_stream_files), ',');
+      for (const std::string& kv_pair : kv_pairs) {
+        std::vector<std::string> name_and_value = absl::StrSplit(kv_pair, '=');
+        RET_CHECK(name_and_value.size() == 2);
+        std::string& name = name_and_value[0];
+        std::string& value = name_and_value[1];
+        std::vector<std::string> type_and_file = absl::StrSplit(value, ':');
+        RET_CHECK(type_and_file.size() == 2);
+        std::string& type = type_and_file[0];
+        std::string& file = type_and_file[1];
+        LOG(INFO) << "Adding input stream '" << name
+                  << "' from file '" << file << "' type " << type;
+        ASSIGN_OR_RETURN(mediapipe::Packet packet,
+                MakePacket(type, file));
+        graph.AddPacketToInputStream(name, packet.At(mediapipe::Timestamp(1)));
+      }
+      graph.CloseAllInputStreams();
+  }
+  return absl::OkStatus();
+}
+
+absl::Status OutputStreamToLocalFile(const std::string& file, const std::string& name, mediapipe::OutputStreamPoller *poller) {
+  LOG(INFO) << "Logging stream '" << name << "' to file '" << file << "'";
+  std::ofstream f;
+  f.open(file);
+  RET_CHECK(f.good());
   mediapipe::Packet packet;
-  while (poller.Next(&packet)) {
+  int i = 0;
+  while (poller->Next(&packet)) {
+    ++i;
+    LOG(INFO) << "\tpacket #" << i << "...";
     std::string output_data;
     if (!absl::GetFlag(FLAGS_strip_timestamps)) {
       absl::StrAppend(&output_data, packet.Timestamp().Value(), ",");
+      LOG(INFO) << "\t" << output_data;
     }
-    absl::StrAppend(&output_data, packet.Get<std::string>(), "\n");
-    file << output_data;
+    //absl::StrAppend(&output_data, packet.Get<std::string>(), "\n");
+    LOG(INFO) << "\t" << packet;
+    f << output_data;
   }
-  file.close();
+  f.close();
+  LOG(INFO) << "\tWrote " << i << " packets.";
   return absl::OkStatus();
 }
 
 absl::Status OutputSidePacketsToLocalFile(mediapipe::CalculatorGraph& graph) {
   if (!absl::GetFlag(FLAGS_output_side_packets).empty() &&
       !absl::GetFlag(FLAGS_output_side_packets_file).empty()) {
+    LOG(INFO) << "Collecting output side packets.";
     std::ofstream file;
     file.open(absl::GetFlag(FLAGS_output_side_packets_file));
     std::vector<std::string> side_packet_names =
@@ -98,12 +157,12 @@ absl::Status OutputSidePacketsToLocalFile(mediapipe::CalculatorGraph& graph) {
 }
 
 absl::Status RunMPPGraph() {
+  std::string calculator_graph_config_file = absl::GetFlag(FLAGS_calculator_graph_config_file);
+  RET_CHECK(!calculator_graph_config_file.empty());
   std::string calculator_graph_config_contents;
   MP_RETURN_IF_ERROR(mediapipe::file::GetContents(
-      absl::GetFlag(FLAGS_calculator_graph_config_file),
+      calculator_graph_config_file,
       &calculator_graph_config_contents));
-  LOG(INFO) << "Get calculator graph config contents: "
-            << calculator_graph_config_contents;
   mediapipe::CalculatorGraphConfig config =
       mediapipe::ParseTextProtoOrDie<mediapipe::CalculatorGraphConfig>(
           calculator_graph_config_contents);
@@ -119,31 +178,48 @@ absl::Status RunMPPGraph() {
           mediapipe::MakePacket<std::string>(name_and_value[1]);
     }
   }
-  LOG(INFO) << "Initialize the calculator graph.";
+  LOG(INFO) << "Initializing the calculator graph...";
   mediapipe::CalculatorGraph graph;
   MP_RETURN_IF_ERROR(graph.Initialize(config, input_side_packets));
-  if (!absl::GetFlag(FLAGS_output_stream).empty() &&
-      !absl::GetFlag(FLAGS_output_stream_file).empty()) {
-    ASSIGN_OR_RETURN(auto poller, graph.AddOutputStreamPoller(
-                                      absl::GetFlag(FLAGS_output_stream)));
+  if (!absl::GetFlag(FLAGS_output_stream_files).empty()) {
+    LOG(INFO) << "Adding output stream poller(s).";
+    std::map<std::string, std::pair<std::string, mediapipe::OutputStreamPoller*>> output_stream_pollers;
+    std::vector<std::string> kv_pairs =
+        absl::StrSplit(absl::GetFlag(FLAGS_output_stream_files), ',');
+    for (const std::string& kv_pair : kv_pairs) {
+      std::vector<std::string> name_and_value = absl::StrSplit(kv_pair, '=');
+      RET_CHECK(name_and_value.size() == 2);
+      std::string& name = name_and_value[0];
+      std::string& file = name_and_value[1];
+      LOG(INFO) << "    Stream '" << name << "' to file '" << file << "'";
+      ASSIGN_OR_RETURN(auto poller, graph.AddOutputStreamPoller(
+                                        name));
+      RET_CHECK(!mediapipe::ContainsKey(output_stream_pollers, file));
+      output_stream_pollers[file] = std::pair(name, &poller);
+    }
     LOG(INFO) << "Start running the calculator graph.";
     MP_RETURN_IF_ERROR(graph.StartRun({}));
-    MP_RETURN_IF_ERROR(OutputStreamToLocalFile(poller));
+    MP_RETURN_IF_ERROR(AddInputStreams(graph));
+    for (auto it = output_stream_pollers.begin(); it != output_stream_pollers.end(); ++it) {
+      MP_RETURN_IF_ERROR(OutputStreamToLocalFile(it->first, it->second.first, it->second.second));
+    }
   } else {
-    RET_CHECK(absl::GetFlag(FLAGS_output_stream).empty() &&
-              absl::GetFlag(FLAGS_output_stream_file).empty())
-        << "--output_stream and --output_stream_file should be specified in "
-           "pair.";
+    LOG(INFO) << "No output streams polled.";
     LOG(INFO) << "Start running the calculator graph.";
     MP_RETURN_IF_ERROR(graph.StartRun({}));
+    MP_RETURN_IF_ERROR(AddInputStreams(graph));
   }
-  MP_RETURN_IF_ERROR(graph.WaitUntilDone());
+  LOG(INFO) << "Waiting for graph to finish.";
+  MP_RETURN_IF_ERROR(absl::GetFlag(FLAGS_wait_until_idle) ? graph.WaitUntilIdle() : graph.WaitUntilDone());
+  LOG(INFO) << "Graph finished.";
   return OutputSidePacketsToLocalFile(graph);
 }
 
 int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
+  LOG(INFO) << "Parsing command line.";
   absl::ParseCommandLine(argc, argv);
+  LOG(INFO) << "Running graph.";
   absl::Status run_status = RunMPPGraph();
   if (!run_status.ok()) {
     LOG(ERROR) << "Failed to run the graph: " << run_status.message();
